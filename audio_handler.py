@@ -32,7 +32,7 @@ class TextToSpeechHandler:
     def _load_voices_from_csv(self):
         """Load voice configurations from CSV file with proper multiline handling"""
         try:
-            csv_path = "22spanish_voices_complete - spanish_voices_complete.csv"
+            csv_path = "reference/22spanish_voices_complete - spanish_voices_complete.csv"
             if os.path.exists(csv_path):
                 # Read CSV with proper multiline handling
                 df = pd.read_csv(csv_path, quotechar='"', skipinitialspace=True)
@@ -179,6 +179,51 @@ class TextToSpeechHandler:
         if language_key in self.voices and voice_display_name in self.voices[language_key]:
             return self.voices[language_key][voice_display_name]
         return None
+
+    def generate_audio_with_voice_id(self, text, voice_id, voice_name):
+        """
+        Generate audio directly with voice_id - simplified approach
+        
+        Args:
+            text (str): Text to convert to speech
+            voice_id (str): ElevenLabs voice ID
+            voice_name (str): Display name for logging
+            
+        Returns:
+            str: Path to temp MP3 file or None if failed
+        """
+        audio_logger.info(f"Converting text to speech with voice: {voice_name} (ID: {voice_id})")
+        
+        try:
+            # Use the official ElevenLabs SDK with fast model for real-time use
+            audio = self.client.text_to_speech.convert(
+                text=text,
+                voice_id=voice_id,
+                model_id="eleven_flash_v2_5",  # Ultra-fast model ~75ms, supports all languages
+                output_format="mp3_44100_128",
+                voice_settings={
+                    "stability": 0.5,
+                    "similarity_boost": 0.5,
+                    "style": 0.0,
+                    "use_speaker_boost": True
+                }
+            )
+            
+            # Convert the audio generator to bytes
+            audio_bytes = b''.join(audio)
+            audio_logger.info(f"TTS request successful. Audio size: {len(audio_bytes)} bytes")
+            
+            # Save to temp file for reliable st.audio() playback
+            import tempfile
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_file:
+                temp_file.write(audio_bytes)
+                temp_file_path = temp_file.name
+                audio_logger.info(f"Audio saved to temp file: {temp_file_path}")
+                return temp_file_path
+            
+        except Exception as e:
+            audio_logger.error(f"TTS request failed with ElevenLabs SDK: {e}")
+            return None
 
     def text_to_speech(self, text, language, voice_name=None):
         """

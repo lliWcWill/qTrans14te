@@ -3,8 +3,8 @@ import streamlit.components.v1 as components
 import base64
 import os
 
-def create_audio_player(audio_file_path, text="Audio", autoplay=False):
-    """Create a custom audio player with waveform visualization"""
+def create_audio_player(audio_file_path, text="Audio", autoplay=False, show_clear_button=True, on_clear_callback=None):
+    """Create a custom audio player with waveform visualization and enhanced controls"""
     
     # Read the audio file and encode it
     with open(audio_file_path, "rb") as f:
@@ -67,6 +67,57 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
                 align-items: center;
                 gap: 1rem;
                 margin-bottom: 1rem;
+            }}
+            
+            .control-buttons {{
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }}
+            
+            .clear-btn {{
+                width: 36px;
+                height: 36px;
+                border-radius: 50%;
+                border: none;
+                background: linear-gradient(135deg, #ff4757, #ff3838);
+                color: white;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-size: 0.9rem;
+                box-shadow: 0 2px 8px rgba(255, 71, 87, 0.3);
+            }}
+            
+            .clear-btn:hover {{
+                transform: scale(1.05);
+                box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+            }}
+            
+            .loading-spinner {{
+                width: 20px;
+                height: 20px;
+                border: 2px solid #404040;
+                border-top: 2px solid #00d4ff;
+                border-radius: 50%;
+                animation: spin 1s linear infinite;
+                margin-left: 0.5rem;
+            }}
+            
+            @keyframes spin {{
+                0% {{ transform: rotate(0deg); }}
+                100% {{ transform: rotate(360deg); }}
+            }}
+            
+            .status-indicator {{
+                color: #00d4ff;
+                font-size: 0.8rem;
+                margin-left: 0.5rem;
+                display: flex;
+                align-items: center;
+                gap: 0.25rem;
             }}
             
             .play-btn {{
@@ -155,11 +206,15 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
             </div>
             
             <div class="audio-controls">
-                <button class="play-btn" id="playBtn">▶</button>
+                <div class="control-buttons">
+                    <button class="play-btn" id="playBtn">▶</button>
+                    {('<button class="clear-btn" id="clearBtn" title="Clear Audio">🗑️</button>' if show_clear_button else '')}
+                </div>
                 <div class="progress-container" id="progressContainer">
                     <div class="progress-bar" id="progressBar"></div>
                 </div>
                 <div class="time-display" id="timeDisplay">0:00 / 0:00</div>
+                <div class="status-indicator" id="statusIndicator"></div>
             </div>
             
             <div class="waveform">
@@ -174,12 +229,15 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
         <script>
             const audio = document.getElementById('audioPlayer');
             const playBtn = document.getElementById('playBtn');
+            const clearBtn = document.getElementById('clearBtn');
             const progressBar = document.getElementById('progressBar');
             const progressContainer = document.getElementById('progressContainer');
             const timeDisplay = document.getElementById('timeDisplay');
             const waveBars = document.getElementById('waveBars');
+            const statusIndicator = document.getElementById('statusIndicator');
             
             let isPlaying = false;
+            let isLoading = false;
             
             // Generate fake waveform bars
             function generateWaveform() {{
@@ -209,6 +267,36 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
                 }}
             }}
             
+            // Update status indicator
+            function updateStatus(message, showSpinner = false) {{
+                statusIndicator.innerHTML = showSpinner ? 
+                    `<div class="loading-spinner"></div> ${{message}}` : message;
+            }}
+            
+            // Clear audio function
+            function clearAudio() {{
+                audio.pause();
+                audio.currentTime = 0;
+                playBtn.textContent = '▶';
+                isPlaying = false;
+                progressBar.style.width = '0%';
+                updateStatus('Audio cleared');
+                
+                // Reset waveform
+                const bars = waveBars.children;
+                for (let bar of bars) {{
+                    bar.classList.remove('active');
+                }}
+                
+                // Notify parent about clear action
+                if (window.parent && window.parent.postMessage) {{
+                    window.parent.postMessage({{
+                        type: 'audio_cleared',
+                        source: 'qtranslate_audio_player'
+                    }}, '*');
+                }}
+            }}
+            
             // Format time
             function formatTime(seconds) {{
                 const mins = Math.floor(seconds / 60);
@@ -222,12 +310,19 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
                     audio.pause();
                     playBtn.textContent = '▶';
                     isPlaying = false;
+                    updateStatus('Paused');
                 }} else {{
+                    updateStatus('Playing...', false);
                     audio.play();
                     playBtn.textContent = '⏸';
                     isPlaying = true;
                 }}
             }});
+            
+            // Clear button event listener
+            if (clearBtn) {{
+                clearBtn.addEventListener('click', clearAudio);
+            }}
             
             // Progress bar click
             progressContainer.addEventListener('click', (e) => {{
@@ -251,6 +346,7 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
                 playBtn.textContent = '▶';
                 isPlaying = false;
                 progressBar.style.width = '0%';
+                updateStatus('Finished');
                 
                 // Reset waveform
                 const bars = waveBars.children;
@@ -259,16 +355,38 @@ def create_audio_player(audio_file_path, text="Audio", autoplay=False):
                 }}
             }});
             
+            // Audio loading events
+            audio.addEventListener('loadstart', () => {{
+                isLoading = true;
+                updateStatus('Loading audio...', true);
+            }});
+            
+            audio.addEventListener('canplaythrough', () => {{
+                isLoading = false;
+                updateStatus('Ready to play');
+            }});
+            
+            audio.addEventListener('error', () => {{
+                isLoading = false;
+                updateStatus('Error loading audio');
+            }});
+            
             // Initialize
             generateWaveform();
+            updateStatus('Initializing...');
+            
             audio.addEventListener('loadedmetadata', () => {{
                 timeDisplay.textContent = `0:00 / ${{formatTime(audio.duration)}}`;
+                updateStatus('Ready to play');
                 
                 // Auto-play if enabled
                 if ({str(autoplay).lower()}) {{
-                    audio.play();
-                    playBtn.textContent = '⏸';
-                    isPlaying = true;
+                    setTimeout(() => {{
+                        audio.play();
+                        playBtn.textContent = '⏸';
+                        isPlaying = true;
+                        updateStatus('Auto-playing...');
+                    }}, 500);
                 }}
             }});
         </script>

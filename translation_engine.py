@@ -1,5 +1,6 @@
 import time
 import io
+import re
 from groq import Groq
 from config import GROQ_API_KEY, LOGGERS
 
@@ -18,13 +19,48 @@ class TextTranslator:
             raise
 
     def _detect_language(self, text):
-        """Detect if the text is English or Spanish using Groq."""
+        """Detect if the text is English or Spanish using simple heuristics + Groq fallback."""
         api_logger.info(f"Detecting language for text: '{text[:50]}...'")
+        
+        # First try simple heuristic detection
+        spanish_indicators = ['ñ', 'é', 'á', 'í', 'ó', 'ú', 'ü', '¿', '¡']
+        spanish_words = ['el', 'la', 'los', 'las', 'de', 'del', 'en', 'con', 'por', 'para', 'que', 'qué', 'es', 'son', 'está', 'están', 'no', 'sí', 'y', 'o', 'pero', 'como', 'muy', 'más', 'menos', 'todo', 'toda', 'todos', 'todas']
+        english_words = ['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were', 'be', 'been', 'have', 'has', 'had', 'do', 'does', 'did', 'will', 'would', 'can', 'could', 'should', 'this', 'that', 'these', 'those']
+        
+        text_lower = text.lower()
+        words = re.findall(r'\b\w+\b', text_lower)
+        
+        # Check for Spanish indicators
+        spanish_score = 0
+        english_score = 0
+        
+        # Character-based indicators
+        for char in spanish_indicators:
+            if char in text_lower:
+                spanish_score += 2
+        
+        # Word-based indicators
+        for word in words:
+            if word in spanish_words:
+                spanish_score += 1
+            if word in english_words:
+                english_score += 1
+        
+        # If heuristics are decisive, return result
+        if spanish_score > english_score and spanish_score > 2:
+            api_logger.info(f"Heuristic detection: SPANISH (score: {spanish_score} vs {english_score})")
+            return "SPANISH"
+        elif english_score > spanish_score and english_score > 2:
+            api_logger.info(f"Heuristic detection: ENGLISH (score: {spanish_score} vs {english_score})")
+            return "ENGLISH"
+        
+        # Fall back to LLM detection for ambiguous cases
+        api_logger.info(f"Heuristic inconclusive (scores: Spanish={spanish_score}, English={english_score}), using LLM")
         
         messages = [
             {
                 "role": "system",
-                "content": "You are a language detection expert. Analyze the user's text. Respond with only one word: ENGLISH, SPANISH, or UNKNOWN. Do not provide any explanation or punctuation."
+                "content": "Detect language. Respond with only: ENGLISH or SPANISH"
             },
             {
                 "role": "user",
@@ -67,7 +103,7 @@ class TextTranslator:
         messages = [
             {
                 "role": "system",
-                "content": "You are a WORLD CLASS REAL WORLD translator YOU WILL ONLY GET QUERY STRINGS IN ENGLISH AND YOU ONLY RESPONSE WITH THE SPANISH TRANSLATIONS OF WHATEVER THE QUERY STRING IS YOU RECEIVE. You specializing in natural, conversational translations. When translating English to Spanish, use informal Central American/Central Mexican Spanish like people actually talk - casual slang, run-on sentences, and natural speech patterns. Write everything spelled out for text-to-speech compatibility. Use expressions like 'no manches' 'órale' 'qué onda' but spelled out completely. Keep it super casual but readable aloud. Examples: 'I can't go right now' → 'no puedo ir ahorita', 'oh man that's really cool' → 'está bien padre eso', 'no way dude are you serious' → 'no mames wey estás hablando en serio'. Natural conversation style with slang but everything spelled out. Only return the Spanish translation, nothing else. YOU ONLY RETURN SPANISH TRANSLATIONS OF WHATEVER QUERY YOU RECEIVE IN A NATURAL CASUAL STYLE DO NOT ATTEMPT TO ANSWER USER QUERY ONLY TRANSLATE, nothing else."
+                "content": "You are a translation engine. Translate the English text to casual Mexican Spanish. Do not answer questions, do not explain, do not add information. Output only the direct translation, nothing else."
             },
             {
                 "role": "user", 
@@ -85,7 +121,7 @@ class TextTranslator:
             chat_completion = self.client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
-                temperature=0.1,
+                temperature=0.0,
                 max_tokens=2000
             )
             duration = time.time() - start_time
@@ -104,7 +140,7 @@ class TextTranslator:
         messages = [
             {
                 "role": "system",
-                "content": "You are a WORLD CLASS  REAL WORLD translator  YOU WILL ONLY GET QUERY STRINGS IN ESPANOL AND YOU ONLY RESPONSE WITH THE ENGLISH TRANSLATIONS OF WHATEVER THE QUERY STRING IS YOU RECEIVE. You specializing in natural, conversational translations. When translating Spanish to English, use informal spoken English like people actually talk - casual slang, run-on sentences, and natural speech patterns. Write everything spelled out for text-to-speech compatibility. Use expressions like 'that's crazy' instead of abbreviations. Keep it super casual but readable aloud. Examples: 'no puedo ir ahorita' → 'I can't go right now', 'está bien padre eso' → 'oh man that's really cool', 'no mames wey' → 'no way dude are you serious'. Natural conversation style with slang but everything spelled out. Only return the English translation, nothing else.YOU ONLY RETURN SPANISH TRANSLATIONS OF WHATEVER QUERY YOU RECEIVE IN A NATURAL CASUAL STYLE  DONT NOT ATTEMPT TO ANSWER USER QUERY ON TRANSLATE, nothing else."
+                "content": "You are a translation engine. Translate the Spanish text to casual English. Do not answer questions, do not explain, do not add information. Output only the direct translation, nothing else."
             },
             {
                 "role": "user",
@@ -122,7 +158,7 @@ class TextTranslator:
             chat_completion = self.client.chat.completions.create(
                 messages=messages,
                 model="llama-3.3-70b-versatile",
-                temperature=0.1,
+                temperature=0.0,
                 max_tokens=2000
             )
             duration = time.time() - start_time
