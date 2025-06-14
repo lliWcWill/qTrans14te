@@ -646,21 +646,19 @@ if st.session_state.translated_text:
             help="Automatically generate audio when selecting a voice"
         )
     
-    if tts_handler and st.session_state.target_language:
-        voice_options = tts_handler.get_voice_options(st.session_state.target_language)
-        if voice_options:
-            # Create voice cards using option_menu
-            with st.container():
-                # Get ALL voices from BOTH languages and separate by gender only
-                male_voices = []
-                female_voices = []
-                
-                # Get voices from both English and Spanish 
-                all_voice_options = []
-                if tts_handler.voices.get('english'):
-                    all_voice_options.extend(list(tts_handler.voices['english'].keys()))
-                if tts_handler.voices.get('spanish'):
-                    all_voice_options.extend(list(tts_handler.voices['spanish'].keys()))
+    if tts_handler and st.session_state.translated_text:
+        # Create voice cards using option_menu
+        with st.container():
+            # Get ALL voices from BOTH languages and separate by gender only
+            male_voices = []
+            female_voices = []
+            
+            # Get voices from both English and Spanish 
+            all_voice_options = []
+            if tts_handler.voices.get('english'):
+                all_voice_options.extend(list(tts_handler.voices['english'].keys()))
+            if tts_handler.voices.get('spanish'):
+                all_voice_options.extend(list(tts_handler.voices['spanish'].keys()))
                 
                 for voice in all_voice_options:
                     # Try getting voice info from either language
@@ -796,10 +794,6 @@ if st.session_state.translated_text:
                 else:
                     # No voice selected - show placeholder message
                     st.info("👆 Select a voice from the dropdowns above to generate audio")
-        else:
-            # No voices available
-            st.warning("🎤 No voices available for the selected language")
-            st.button("🎤 No Voices Available", disabled=True, use_container_width=True)
     else:
         # TTS not available
         st.warning("🎤 Text-to-speech service is not available. Please check your ElevenLabs API key.")
