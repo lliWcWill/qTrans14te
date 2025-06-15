@@ -235,6 +235,8 @@ if 'tts_text' not in st.session_state:
     st.session_state.tts_text = ""
 if 'editing_text' not in st.session_state:
     st.session_state.editing_text = False
+if 'translating' not in st.session_state:
+    st.session_state.translating = False
 
 @st.cache_resource
 def get_translator():
@@ -394,12 +396,13 @@ def get_voice_info_from_name(voice_name, tts_handler):
             return tts_handler.voices[lang][voice_name]
     return None
 
-# Auto-dismiss messages after 3 seconds (but not during TTS or when editing text)
+# Auto-dismiss messages after 3 seconds (but not during TTS, editing text, or translating)
 current_time = time.time()
 if (st.session_state.message_timestamp > 0 and 
     (current_time - st.session_state.message_timestamp) > 3 and 
     not st.session_state.get('tts_in_progress', False) and
-    not st.session_state.get('editing_text', False)):
+    not st.session_state.get('editing_text', False) and
+    not st.session_state.get('translating', False)):
     clear_audio_messages()
 
 # Beautiful native audio input - only recording method
@@ -421,9 +424,12 @@ if audio_data is not None and not st.session_state.get('tts_in_progress', False)
     audio_hash = hash(audio_bytes) if audio_bytes else None
     
     if audio_hash and audio_hash != st.session_state.get('last_processed_audio'):
-        # Only show recording status if not doing TTS and not editing text
+        # Only show audio recording notifications for actual audio recording
+        # Skip notifications if there's already translated text (user is probably working with translations)
         if (not st.session_state.get('tts_in_progress', False) and 
-            not st.session_state.get('editing_text', False)):
+            not st.session_state.get('editing_text', False) and
+            not st.session_state.get('translating', False) and
+            not st.session_state.get('translated_text', '')):  # No notifications if translation exists
             if not st.session_state.audio_status:
                 st.session_state.audio_status = "Audio recorded successfully!"
                 st.session_state.message_timestamp = current_time
@@ -481,6 +487,32 @@ if input_text != st.session_state.input_text:
         st.session_state.transcribed_text = ""
         st.session_state.ready_to_translate = bool(input_text.strip())
 
+# Add JavaScript for Ctrl+Enter to trigger translation
+st.markdown("""
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea[data-testid="stTextArea"]');
+    textareas.forEach(function(textarea) {
+        // Only add to the first textarea (input box)
+        if (textarea.placeholder && textarea.placeholder.includes('Type or paste your text here')) {
+            textarea.addEventListener('keydown', function(e) {
+                if (e.ctrlKey && e.key === 'Enter') {
+                    e.preventDefault();
+                    // Find and click the translate button
+                    const translateBtn = document.querySelector('button[kind="primary"]:has-text("⚡ Translate")') || 
+                                       document.querySelector('button:contains("⚡ Translate")') ||
+                                       Array.from(document.querySelectorAll('button')).find(btn => btn.textContent.includes('⚡ Translate'));
+                    if (translateBtn && !translateBtn.disabled) {
+                        translateBtn.click();
+                    }
+                }
+            });
+        }
+    });
+});
+</script>
+""", unsafe_allow_html=True)
+
 # Button Layout - Centered Translate Button
 col1, col2, col3 = st.columns([1, 2, 1])
 with col2:
@@ -489,13 +521,20 @@ with col2:
     button_disabled = not has_text
     
     st.markdown('<div class="translate-btn">', unsafe_allow_html=True)
-    if st.button("⚡ Translate", 
-                use_container_width=True, 
-                key="translate_btn",
-                disabled=button_disabled):
-        # Reset recording method
+    # Check if translate button was clicked (set flag early)
+    translate_clicked = st.button("⚡ Translate", 
+                                 use_container_width=True, 
+                                 key="translate_btn",
+                                 disabled=button_disabled)
+    
+    if translate_clicked:
+        # IMMEDIATELY set flag to prevent audio notifications
+        st.session_state.translating = True
+        # Reset recording method and clear old messages
         st.session_state.recording_method = None
         clear_audio_messages()
+        # Show translation in progress notification FIRST
+        st.toast("⚙️ Translating...", icon='🔄')
         # Close any open TTS modals when translating
         st.session_state.show_voice_modal = False
         log_tts_debug("Translate button clicked - TTS modal closed")
@@ -521,6 +560,9 @@ with col2:
             st.session_state.transcribed_text = ""
             st.session_state.ready_to_translate = False
             st.session_state.last_processed_audio = None  # Reset audio processing
+            
+            # Reset translating flag
+            st.session_state.translating = False
             
             ui_logger.info(f"Translation received. Direction: {direction}")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -919,9 +961,11 @@ if st.session_state.get('audio_played', False):
             st.session_state.selected_voice = None
             st.session_state.tts_debug_logs = []
             st.session_state.last_auto_generated_voice = None
-            # Clear voice selectors
-            st.session_state.male_voice_selector = "Select a voice..."
-            st.session_state.female_voice_selector = "Select a voice..."
+            # Clear voice selectors (delete to reset to default)
+            if 'male_voice_selector' in st.session_state:
+                del st.session_state.male_voice_selector
+            if 'female_voice_selector' in st.session_state:
+                del st.session_state.female_voice_selector
             st.session_state.tts_text = ""
             # Clear new transcription state
             st.session_state.transcribed_text = ""
