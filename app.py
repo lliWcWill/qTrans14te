@@ -231,6 +231,8 @@ if 'male_voice_selector' not in st.session_state:
     st.session_state.male_voice_selector = "Select a voice..."
 if 'female_voice_selector' not in st.session_state:
     st.session_state.female_voice_selector = "Select a voice..."
+if 'tts_text' not in st.session_state:
+    st.session_state.tts_text = ""
 
 @st.cache_resource
 def get_translator():
@@ -318,7 +320,9 @@ def log_tts_debug(message):
 # Helper function to generate voice audio
 def generate_voice_audio(selected_voice, tts_handler):
     """Generate audio for selected voice with simplified logic"""
-    if not tts_handler or not st.session_state.translated_text:
+    # Use edited text if available, otherwise use original translation
+    text_to_speak = st.session_state.get('tts_text', st.session_state.translated_text)
+    if not tts_handler or not text_to_speak:
         return False
     
     log_tts_debug(f"Generating audio for voice: {selected_voice}")
@@ -342,7 +346,7 @@ def generate_voice_audio(selected_voice, tts_handler):
         
         # Generate audio directly with voice_id (no language mapping needed)
         audio_data = tts_handler.generate_audio_with_voice_id(
-            st.session_state.translated_text, 
+            text_to_speak, 
             voice_id,
             selected_voice
         )
@@ -526,14 +530,21 @@ if st.session_state.translated_text:
     
     st.markdown(f"### Translation Result ({st.session_state.translation_direction})")
     
-    # The output text box
-    st.text_area(
+    # The output text box - editable and tracked
+    edited_text = st.text_area(
         "Translated Text",
         value=st.session_state.translated_text,
         height=150,
         key="output_text_area",
-        label_visibility="collapsed"
+        label_visibility="collapsed",
+        help="Edit this text and it will be used for voice generation"
     )
+    
+    # Update the text that will be sent to TTS
+    if edited_text != st.session_state.translated_text:
+        st.session_state.tts_text = edited_text
+    else:
+        st.session_state.tts_text = st.session_state.translated_text
     
     # Center the Copy button under the text box
     copy_col1, copy_col2, copy_col3 = st.columns([1, 1, 1])
@@ -541,7 +552,8 @@ if st.session_state.translated_text:
     with copy_col2:
         # Enhanced copy button using components with proper clipboard permissions
         # Pre-escape the text outside the f-string to avoid backslash issues
-        escaped_text = st.session_state.translated_text.replace('`', '\\`').replace('\\', '\\\\').replace('\n', '\\n')
+        text_to_copy = st.session_state.get('tts_text', st.session_state.translated_text)
+        escaped_text = text_to_copy.replace('`', '\\`').replace('\\', '\\\\').replace('\n', '\\n')
         
         copy_button_html = f"""
         <div class="copy-btn-container">
@@ -765,8 +777,9 @@ if st.session_state.translated_text:
                 # Only show generation options if a voice is selected
                 if selected_voice:
                     # Auto-generate audio if autoplay is enabled and voice changed (and not just cleared)
+                    text_to_speak = st.session_state.get('tts_text', st.session_state.translated_text)
                     if (st.session_state.autoplay_enabled and 
-                        st.session_state.translated_text and 
+                        text_to_speak and 
                         st.session_state.get('last_auto_generated_voice') != selected_voice and
                         not st.session_state.get('audio_just_cleared', False)):
                         
@@ -797,7 +810,7 @@ if st.session_state.translated_text:
                             key="manual_generate_btn", 
                             type="primary",
                             use_container_width=True,
-                            disabled=not st.session_state.translated_text
+                            disabled=not st.session_state.get('tts_text', st.session_state.translated_text)
                         ):
                             # Set loading state to prevent mic activation
                             st.session_state.audio_loading = True
@@ -895,6 +908,7 @@ if st.session_state.get('audio_played', False):
             # Clear voice selectors
             st.session_state.male_voice_selector = "Select a voice..."
             st.session_state.female_voice_selector = "Select a voice..."
+            st.session_state.tts_text = ""
             # Clear new transcription state
             st.session_state.transcribed_text = ""
             st.session_state.ready_to_translate = False
