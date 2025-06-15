@@ -809,14 +809,10 @@ if 'audio_played' not in st.session_state:
 if st.session_state.get('generated_audio_path') and st.session_state.get('audio_played', False):
     st.markdown("---")
     
-    # Clear and Download buttons above the audio player
+    # Download button above the audio player
     button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
     
-    with button_col1:
-        if st.button("🗑️ Clear Audio", key="clear_audio_btn", use_container_width=True, type="secondary"):
-            clear_audio()
-    
-    with button_col3:
+    with button_col2:
         # Read the audio file for download
         with open(st.session_state.generated_audio_path, 'rb') as audio_file:
             audio_bytes = audio_file.read()
@@ -858,9 +854,7 @@ if st.session_state.get('generated_audio_path') and st.session_state.get('audio_
     create_audio_player(
         st.session_state.generated_audio_path, 
         text=f"Translation with {st.session_state.get('generated_audio_voice', 'Selected Voice')}",
-        autoplay=autoplay_enabled,
-        show_clear_button=True,
-        on_clear_callback=clear_audio
+        autoplay=autoplay_enabled
     )
     
     # Mark that this is no longer a page reload
