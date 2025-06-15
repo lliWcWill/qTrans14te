@@ -227,6 +227,10 @@ if 'ready_to_translate' not in st.session_state:
     st.session_state.ready_to_translate = False
 if 'last_processed_audio' not in st.session_state:
     st.session_state.last_processed_audio = None
+if 'male_voice_selector' not in st.session_state:
+    st.session_state.male_voice_selector = "Select a voice..."
+if 'female_voice_selector' not in st.session_state:
+    st.session_state.female_voice_selector = "Select a voice..."
 
 @st.cache_resource
 def get_translator():
@@ -686,6 +690,15 @@ if st.session_state.translated_text:
                 selected_voice = None
                 selected_voice_info = None
                 
+                # Callback to clear opposite selectbox
+                def on_male_selected():
+                    if st.session_state.male_voice_selector != "Select a voice...":
+                        st.session_state.female_voice_selector = "Select a voice..."
+                
+                def on_female_selected():
+                    if st.session_state.female_voice_selector != "Select a voice...":
+                        st.session_state.male_voice_selector = "Select a voice..."
+                
                 with col_male:
                     st.markdown("**👨 Man**")
                     if male_voices:
@@ -694,7 +707,8 @@ if st.session_state.translated_text:
                             "Choose male voice:",
                             options=male_options,
                             key="male_voice_selector",
-                            label_visibility="collapsed"
+                            label_visibility="collapsed",
+                            on_change=on_male_selected
                         )
                         
                         if selected_male != "Select a voice...":
@@ -722,7 +736,8 @@ if st.session_state.translated_text:
                             "Choose female voice:",
                             options=female_options,
                             key="female_voice_selector", 
-                            label_visibility="collapsed"
+                            label_visibility="collapsed",
+                            on_change=on_female_selected
                         )
                         
                         if selected_female != "Select a voice...":
@@ -877,6 +892,9 @@ if st.session_state.get('audio_played', False):
             st.session_state.selected_voice = None
             st.session_state.tts_debug_logs = []
             st.session_state.last_auto_generated_voice = None
+            # Clear voice selectors
+            st.session_state.male_voice_selector = "Select a voice..."
+            st.session_state.female_voice_selector = "Select a voice..."
             # Clear new transcription state
             st.session_state.transcribed_text = ""
             st.session_state.ready_to_translate = False
