@@ -233,6 +233,8 @@ if 'female_voice_selector' not in st.session_state:
     st.session_state.female_voice_selector = "Select a voice..."
 if 'tts_text' not in st.session_state:
     st.session_state.tts_text = ""
+if 'editing_text' not in st.session_state:
+    st.session_state.editing_text = False
 
 @st.cache_resource
 def get_translator():
@@ -392,11 +394,12 @@ def get_voice_info_from_name(voice_name, tts_handler):
             return tts_handler.voices[lang][voice_name]
     return None
 
-# Auto-dismiss messages after 3 seconds (but not during TTS)
+# Auto-dismiss messages after 3 seconds (but not during TTS or when editing text)
 current_time = time.time()
 if (st.session_state.message_timestamp > 0 and 
     (current_time - st.session_state.message_timestamp) > 3 and 
-    not st.session_state.get('tts_in_progress', False)):
+    not st.session_state.get('tts_in_progress', False) and
+    not st.session_state.get('editing_text', False)):
     clear_audio_messages()
 
 # Beautiful native audio input - only recording method
@@ -418,8 +421,9 @@ if audio_data is not None and not st.session_state.get('tts_in_progress', False)
     audio_hash = hash(audio_bytes) if audio_bytes else None
     
     if audio_hash and audio_hash != st.session_state.get('last_processed_audio'):
-        # Only show recording status if not doing TTS
-        if not st.session_state.get('tts_in_progress', False):
+        # Only show recording status if not doing TTS and not editing text
+        if (not st.session_state.get('tts_in_progress', False) and 
+            not st.session_state.get('editing_text', False)):
             if not st.session_state.audio_status:
                 st.session_state.audio_status = "Audio recorded successfully!"
                 st.session_state.message_timestamp = current_time
@@ -543,11 +547,18 @@ if st.session_state.translated_text:
     # Update the text that will be sent to TTS and show notification
     if edited_text != st.session_state.translated_text:
         st.session_state.tts_text = edited_text
+        # Clear any old audio status to prevent conflicts
+        st.session_state.audio_status = ""
+        st.session_state.message_timestamp = 0
+        # Set flag to suppress audio notifications when editing text
+        st.session_state.editing_text = True
         # Show notification for edited text
         if edited_text.strip():  # Only show if there's actual content
             st.toast("✨ Text updated! This will be used for voice generation", icon='📝')
     else:
         st.session_state.tts_text = st.session_state.translated_text
+        # Clear editing flag when not editing
+        st.session_state.editing_text = False
     
     # Center the Copy button under the text box
     copy_col1, copy_col2, copy_col3 = st.columns([1, 1, 1])
