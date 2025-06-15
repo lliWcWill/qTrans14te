@@ -807,11 +807,34 @@ if 'audio_played' not in st.session_state:
 if st.session_state.get('generated_audio_path') and st.session_state.get('audio_played', False):
     st.markdown("---")
     
-    # Clear audio button above the audio player
-    clear_col1, clear_col2, clear_col3 = st.columns([1, 1, 1])
-    with clear_col2:
+    # Clear and Download buttons above the audio player
+    button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
+    
+    with button_col1:
         if st.button("🗑️ Clear Audio", key="clear_audio_btn", use_container_width=True, type="secondary"):
             clear_audio()
+    
+    with button_col3:
+        # Read the audio file for download
+        with open(st.session_state.generated_audio_path, 'rb') as audio_file:
+            audio_bytes = audio_file.read()
+        
+        # Create filename with voice name and timestamp
+        import datetime
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        voice_name = st.session_state.get('generated_audio_voice', 'audio').replace(' ', '_').replace('👨', '').replace('👩', '')
+        filename = f"qtranslate_{voice_name}_{timestamp}.mp3"
+        
+        # Download button
+        st.download_button(
+            label="💾 Save Audio",
+            data=audio_bytes,
+            file_name=filename,
+            mime="audio/mpeg",
+            key=f"download_{timestamp}",
+            use_container_width=True,
+            type="primary"
+        )
     
     # Audio player status indicator
     status_col1, status_col2 = st.columns([3, 1])
