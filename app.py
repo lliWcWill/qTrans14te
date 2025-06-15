@@ -433,7 +433,8 @@ if audio_data is not None and not st.session_state.get('tts_in_progress', False)
                     st.session_state.ready_to_translate = True
                     st.session_state.audio_status = f"Transcribed: '{transcribed_text[:100]}...'"
                     st.session_state.message_timestamp = time.time()
-                    st.session_state.last_processed_audio = audio_hash  # Mark as processed
+                    # Don't mark as processed - this allows fresh recording on next interaction
+                    # st.session_state.last_processed_audio = audio_hash  # REMOVED to enable auto-clear
                     # Don't rerun - let natural flow continue
                 else:
                     st.session_state.audio_error = transcribed_text
