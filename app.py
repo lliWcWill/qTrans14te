@@ -540,9 +540,12 @@ if st.session_state.translated_text:
         help="Edit this text and it will be used for voice generation"
     )
     
-    # Update the text that will be sent to TTS
+    # Update the text that will be sent to TTS and show notification
     if edited_text != st.session_state.translated_text:
         st.session_state.tts_text = edited_text
+        # Show notification for edited text
+        if edited_text.strip():  # Only show if there's actual content
+            st.toast("✨ Text updated! This will be used for voice generation", icon='📝')
     else:
         st.session_state.tts_text = st.session_state.translated_text
     
