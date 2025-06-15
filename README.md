@@ -1,12 +1,12 @@
-# qTranslate
+<div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
-[![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io)
-[![Groq](https://img.shields.io/badge/Groq-API-orange.svg)](https://groq.com)
-[![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-purple.svg)](https://elevenlabs.io)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+# ⚡ qTranslate
+
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org) [![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io) [![Groq](https://img.shields.io/badge/Groq-API-orange.svg)](https://groq.com) [![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-purple.svg)](https://elevenlabs.io) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 **Voice-Powered Translation with AI**
+
+</div>
 
 <div align="center">
   <img src="reference/Screenshot from 2025-06-14 22-52-57.png" alt="qTranslate Main Interface" width="70%" />
