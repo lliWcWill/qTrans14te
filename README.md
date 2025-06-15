@@ -8,6 +8,10 @@
 
 **Voice-Powered Translation with AI**
 
+<div align="center">
+  <img src="reference/Screenshot from 2025-06-14 22-52-57.png" alt="qTranslate Main Interface" width="70%" />
+</div>
+
 A real-time translation app that combines speech recognition, AI translation, and text-to-speech capabilities. Powered by Groq's lightning-fast language models and ElevenLabs' premium voice synthesis.
 
 ## Features
@@ -34,12 +38,10 @@ A real-time translation app that combines speech recognition, AI translation, an
 - Mobile-friendly design
 - Auto-play functionality
 
-## Screenshots
+## Translation Results
 
 <div align="center">
-  <img src="reference/Screenshot from 2025-06-14 22-52-57.png" alt="qTranslate Main Interface" width="45%" />
-  &nbsp;&nbsp;
-  <img src="reference/Screenshot from 2025-06-14 22-55-12.png" alt="Translation Results" width="45%" />
+  <img src="reference/Screenshot from 2025-06-14 22-55-12.png" alt="Translation Results" width="70%" />
 </div>
 
 ## Quick Start
