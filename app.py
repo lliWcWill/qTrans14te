@@ -353,6 +353,7 @@ def generate_voice_audio(selected_voice, tts_handler):
             st.session_state.generated_audio_voice = selected_voice
             st.session_state.selected_voice = selected_voice  # Remember the voice
             st.session_state.audio_played = True  # Enable restart option
+            st.session_state.page_reload = False  # Enable autoplay on next render
             log_tts_debug("Audio generated successfully")
             return True
         else:
@@ -762,7 +763,8 @@ if st.session_state.translated_text:
                             success = generate_voice_audio(selected_voice, tts_handler)
                             if success:
                                 st.success(f"🎵 Audio ready with {selected_voice}")
-                                # Don't rerun - let natural flow continue
+                                # Force rerun to display player with autoplay
+                                st.rerun()
                             else:
                                 st.error("Failed to generate audio. Please try again.")
                                 # Reset on failure so user can try again
