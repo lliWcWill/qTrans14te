@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ qTranslate
+# ⚡ <span style="color: #F55036;">q</span><span style="color: #00d4ff;">Translate</span>
 
 [![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org) [![Streamlit](https://img.shields.io/badge/Streamlit-1.32+-red.svg)](https://streamlit.io) [![Groq](https://img.shields.io/badge/Groq-API-orange.svg)](https://groq.com) [![ElevenLabs](https://img.shields.io/badge/ElevenLabs-TTS-purple.svg)](https://elevenlabs.io) [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
